@@ -1,0 +1,467 @@
+{
+  "name": "n8n_Pipeline_Setter_V1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "meta-instagram-webhook",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "e6727282-5d9c-443b-8588-752aef12a321",
+      "name": "Meta Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const crypto = require('crypto');\nconst signature = $node[\"Meta Webhook\"].req.headers['x-hub-signature-256'];\nconst rawBody = $node[\"Meta Webhook\"].req.rawBody;\nconst appSecret = 'META_APP_SECRET_ENV_VAR';\n\nif (!signature) {\n  throw new Error('Missing signature header');\n}\n\nconst hash = 'sha256=' + crypto.createHmac('sha256', appSecret).update(rawBody).digest('hex');\n\nif (signature !== hash) {\n  return [{ json: { authenticated: false, error: 'Signature mismatch' } }];\n}\n\nreturn [{ json: { authenticated: true, payload: JSON.parse(rawBody.toString()) } }];"
+      },
+      "id": "d094bf34-a15d-45db-9c8a-ec7282e75e11",
+      "name": "Check Signature HMAC",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        280,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.authenticated }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "e229c9ef-b32b-42fa-97b7-58ff8cb67c31",
+      "name": "Is Authorized?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const payload = $node[\"Check Signature HMAC\"].json.payload;\nconst entry = payload.entry && payload.entry[0];\nconst messaging = entry && entry.messaging && entry.messaging[0];\n\nif (!messaging) {\n  return [];\n}\n\nreturn [{\n  json: {\n    message_id: messaging.message.mid,\n    sender_id: messaging.sender.id,\n    message_text: messaging.message.text,\n    timestamp: messaging.timestamp\n  }\n}];"
+      },
+      "id": "4955b23d-b2a6-4be0-8025-a136bfb7d903",
+      "name": "Extract Metadata",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": "NOTION_LEADS_DB_ID",
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "WhatsApp ID / Social ID",
+              "type": "rich_text",
+              "condition": "equals",
+              "value": "={{ $json.sender_id }}"
+            }
+          ]
+        }
+      },
+      "id": "a90df7cb-8c0c-4467-938a-0209930ee1d4",
+      "name": "Search Lead in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        820,
+        200
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.length > 0 }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "c88f9a90-33bf-4c7c-9b7e-976c66d92ee2",
+      "name": "Lead Exists?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": "NOTION_LEADS_DB_ID",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Nom Client",
+              "type": "title",
+              "title": "Prospect {{ $node[\"Extract Metadata\"].json.sender_id }}"
+            },
+            {
+              "key": "WhatsApp ID / Social ID",
+              "type": "rich_text",
+              "richText": "={{ $node[\"Extract Metadata\"].json.sender_id }}"
+            },
+            {
+              "key": "Statut Qualification",
+              "type": "select",
+              "select": "Nouveau"
+            }
+          ]
+        }
+      },
+      "id": "1aa3e282-3532-421b-a5d6-0c9f131a31bf",
+      "name": "Create Lead in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        320
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "options": {
+          "responseFormat": "json_object"
+        },
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un Setter Virtuel expert en vente pour Entrepreneurs.com. Tu dois analyser le message de l'utilisateur pour qualifier son profil.\nAttentes de qualification:\n1. CA actuel (en K€/an ou €/mois)\n2. Métier / Niche\n3. Budget disponible\n4. Degré d'urgence (Froid, Tiède, Chaud)\n\nRéponds au format JSON uniquement sous la structure suivante :\n{\n  \"analyse\": \"résumé en 1 phrase de la situation\",\n  \"ca_estime\": 0,\n  \"urgence\": \"Froid|Tiède|Chaud\",\n  \"niche\": \"niche détectée\",\n  \"reponse_setter\": \"Le texte poli et court pour continuer la conversation ou proposer le lien Calendly si Chaud\"\n}"
+            },
+            {
+              "role": "user",
+              "content": "Message client : {{ $node[\"Extract Metadata\"].json.message_text }}"
+            }
+          ]
+        }
+      },
+      "id": "403310cb-30d8-4fbd-bfde-e8abcf229e01",
+      "name": "Call GPT-4o-mini",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1400,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const responseText = $node[\"Call GPT-4o-mini\"].json.choices[0].message.content;\nreturn [JSON.parse(responseText)];"
+      },
+      "id": "ee70fbef-bf99-4c8d-bf8d-d558d7c490ef",
+      "name": "Parse JSON Setter",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        1580,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.urgence }}",
+              "value2": "Chaud"
+            }
+          ]
+        }
+      },
+      "id": "4c8fcfef-fbd2-4ee1-b928-1bf918daee87",
+      "name": "Is Hot Lead?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        1760,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "channel": "leads-priority",
+        "text": "🚨 *Lead Chaud Détecté !*\n👤 *ID Client :* {{ $node[\"Extract Metadata\"].json.sender_id }}\n📝 *Analyse :* {{ $node[\"Parse JSON Setter\"].json.analyse }}\n💰 *Urgence :* {{ $node[\"Parse JSON Setter\"].json.urgence }}\n💬 *Réponse Automatisée envoyée :* {{ $node[\"Parse JSON Setter\"].json.reponse_setter }}\n🔗 [Ouvrir dans Notion](https://notion.so/NOTION_LEADS_DB_ID)"
+      },
+      "id": "ee991a92-23c2-4eb9-bf2f-ccb00b0ee3f1",
+      "name": "Send Slack Hot Lead Alert",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        100
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://graph.facebook.com/v17.0/me/messages",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "oAuth2",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Authorization",
+              "value": "Bearer META_PAGE_ACCESS_TOKEN"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "recipient",
+              "value": "={ \"id\": \"{{ $node[\"Extract Metadata\"].json.sender_id }}\" }"
+            },
+            {
+              "name": "message",
+              "value": "={ \"text\": \"{{ $node[\"Parse JSON Setter\"].json.reponse_setter }}\" }"
+            }
+          ]
+        }
+      },
+      "id": "df2a9bb2-bf23-4411-ab2c-88de8cf9eeef",
+      "name": "Send Message to IG",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        2200,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "databaseId": "NOTION_LEADS_DB_ID",
+        "pageId": "={{ $node[\"Lead Exists?\"].json.id || $node[\"Create Lead in Notion\"].json.id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Statut Qualification",
+              "type": "select",
+              "select": "={{ $node[\"Parse JSON Setter\"].json.urgence }}"
+            },
+            {
+              "key": "Notes d'Analyse",
+              "type": "rich_text",
+              "richText": "={{ $node[\"Parse JSON Setter\"].json.analyse }}"
+            }
+          ]
+        }
+      },
+      "id": "b182cbff-0e31-4b11-a8dc-dd98ceef0fef",
+      "name": "Update Lead Status Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        1960,
+        300
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Meta Webhook": {
+      "main": [
+        [
+          {
+            "node": "Check Signature HMAC",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Signature HMAC": {
+      "main": [
+        [
+          {
+            "node": "Is Authorized?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Authorized?": {
+      "main": [
+        [
+          {
+            "node": "Extract Metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Metadata": {
+      "main": [
+        [
+          {
+            "node": "Search Lead in Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search Lead in Notion": {
+      "main": [
+        [
+          {
+            "node": "Lead Exists?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Lead Exists?": {
+      "main": [
+        [
+          {
+            "node": "Call GPT-4o-mini",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Create Lead in Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Lead in Notion": {
+      "main": [
+        [
+          {
+            "node": "Call GPT-4o-mini",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call GPT-4o-mini": {
+      "main": [
+        [
+          {
+            "node": "Parse JSON Setter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Parse JSON Setter": {
+      "main": [
+        [
+          {
+            "node": "Is Hot Lead?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Hot Lead?": {
+      "main": [
+        [
+          {
+            "node": "Send Slack Hot Lead Alert",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Update Lead Status Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send Slack Hot Lead Alert": {
+      "main": [
+        [
+          {
+            "node": "Send Message to IG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Update Lead Status Notion": {
+      "main": [
+        [
+          {
+            "node": "Send Message to IG",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "meta": {
+    "instanceId": "setter-virtual-sandbox-id"
+  }
+}

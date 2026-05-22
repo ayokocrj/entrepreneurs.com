@@ -1,0 +1,368 @@
+{
+  "name": "n8n_Pipeline_Disputes_V1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "shopify-order-fulfilled",
+        "options": {}
+      },
+      "id": "a90df7cb-8c0c-4467-938a-0209930ee1d4",
+      "name": "Shopify Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        150
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": "NOTION_DELIVERIES_DB_ID",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Nom Client",
+              "type": "title",
+              "title": "={{ $json.body.customer.first_name }} {{ $json.body.customer.last_name }}"
+            },
+            {
+              "key": "Numéro Suivi",
+              "type": "rich_text",
+              "richText": "={{ $json.body.fulfillments[0].tracking_number }}"
+            },
+            {
+              "key": "Transporteur",
+              "type": "select",
+              "select": "={{ $json.body.fulfillments[0].tracking_company }}"
+            },
+            {
+              "key": "Statut Livraison",
+              "type": "select",
+              "select": "En transit"
+            }
+          ]
+        }
+      },
+      "id": "1aa3e282-3532-421b-a5d6-0c9f131a31bf",
+      "name": "Save Delivery in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        280,
+        150
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "triggerTimes": {
+          "item": [
+            {
+              "mode": "everyDay",
+              "hour": 2
+            }
+          ]
+        }
+      },
+      "id": "f838c4b2-a42b-4e12-b91c-8cf2189dee01",
+      "name": "Cron Nocturne 2h00",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [
+        100,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "getAll",
+        "databaseId": "NOTION_DELIVERIES_DB_ID",
+        "filterType": "manual",
+        "filters": {
+          "conditions": [
+            {
+              "key": "Statut Livraison",
+              "type": "select",
+              "condition": "equals",
+              "value": "En transit"
+            }
+          ]
+        }
+      },
+      "id": "e7284b39-bd9a-47ca-80b1-efcb72a81aa3",
+      "name": "Get Transit Colis",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        280,
+        350
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "=https://api.laposte.fr/multiship/v1/trackings/{{ $json.properties.Numéro Suivi.rich_text[0].plain_text }}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Okapi-Key",
+              "value": "LAPOSTE_API_KEY"
+            }
+          ]
+        }
+      },
+      "id": "a19dcbff-ef38-4e8c-b9b2-ed3847eef090",
+      "name": "Check Carrier API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        460,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{ $json.body.shipment.delayDetected }}",
+              "value2": true
+            }
+          ]
+        }
+      },
+      "id": "18f9cb39-b9a2-4a0b-9cb1-de8aee1c1fb3",
+      "name": "Is Delay Detected?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        640,
+        350
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://SHOPIFY_STORE.myshopify.com/admin/api/2023-04/price_rules.json",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Shopify-Access-Token",
+              "value": "SHOPIFY_API_PASSWORD"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "price_rule",
+              "value": "={ \"title\": \"EXCUSE-{{ $node[\"Get Transit Colis\"].json.properties.Numéro Suivi.rich_text[0].plain_text }}\", \"target_type\": \"line_item\", \"target_selection\": \"all\", \"allocation_method\": \"across\", \"value_type\": \"percentage\", \"value\": \"-15.0\", \"customer_selection\": \"all\", \"starts_at\": \"{{ new Date().toISOString() }}\" }"
+            }
+          ]
+        }
+      },
+      "id": "ee7bcfeb-bc83-4a11-8930-bc7eef923aa1",
+      "name": "Create Shopify Discount",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        820,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Rédige une lettre de réclamation formelle et solide juridiquement à destination de la Poste pour retard de livraison.\nDonnées: N° de suivi {{ $node[\"Get Transit Colis\"].json.properties.Numéro Suivi.rich_text[0].plain_text }}, Date contractuelle dépassée."
+            }
+          ]
+        }
+      },
+      "id": "df2a9bb2-bf23-4111-ab2c-88de8cf9eeef",
+      "name": "Write Carrier Claim Letter",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        820,
+        420
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "operation": "update",
+        "databaseId": "NOTION_DELIVERIES_DB_ID",
+        "pageId": "={{ $node[\"Get Transit Colis\"].json.id }}",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Statut Livraison",
+              "type": "select",
+              "select": "Litige Ouvert"
+            },
+            {
+              "key": "Lettre de Réclamation",
+              "type": "rich_text",
+              "richText": "={{ $node[\"Write Carrier Claim Letter\"].json.choices[0].message.content }}"
+            },
+            {
+              "key": "Code Promo Excuse",
+              "type": "rich_text",
+              "richText": "EXCUSE-{{ $node[\"Get Transit Colis\"].json.properties.Numéro Suivi.rich_text[0].plain_text }}"
+            }
+          ]
+        }
+      },
+      "id": "ee991a92-23c2-4eb9-bf2f-ccb00b0ee3f1",
+      "name": "Open Claim in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        1050,
+        350
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "sav-shipping-delays",
+        "text": "📦 *Retard Colis Détecté !*\n👤 *Client :* {{ $node[\"Get Transit Colis\"].json.properties.Nom Client.title[0].plain_text }}\n🚚 *N° Suivi :* {{ $node[\"Get Transit Colis\"].json.properties.Numéro Suivi.rich_text[0].plain_text }}\n⚠️ *Statut :* Litige Ouvert dans Notion. Code de compensation de -15% pré-généré sur Shopify.\n👉 _Relire et envoyer la réclamation au transporteur dans Notion._"
+      },
+      "id": "f82cbe99-23c2-4eb9-bf2f-ccb00b0ee3f1",
+      "name": "Slack Alert Julie",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        350
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials-id"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Shopify Webhook": {
+      "main": [
+        [
+          {
+            "node": "Save Delivery in Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cron Nocturne 2h00": {
+      "main": [
+        [
+          {
+            "node": "Get Transit Colis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Transit Colis": {
+      "main": [
+        [
+          {
+            "node": "Check Carrier API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Check Carrier API": {
+      "main": [
+        [
+          {
+            "node": "Is Delay Detected?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Delay Detected?": {
+      "main": [
+        [
+          {
+            "node": "Create Shopify Discount",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Shopify Discount": {
+      "main": [
+        [
+          {
+            "node": "Write Carrier Claim Letter",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Write Carrier Claim Letter": {
+      "main": [
+        [
+          {
+            "node": "Open Claim in Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open Claim in Notion": {
+      "main": [
+        [
+          {
+            "node": "Slack Alert Julie",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "meta": {
+    "instanceId": "dispute-tracker-sandbox-id"
+  }
+}

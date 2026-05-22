@@ -1,0 +1,330 @@
+{
+  "name": "n8n_Pipeline_BTP_V1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "whatsapp-incoming-message",
+        "options": {
+          "rawBody": true
+        }
+      },
+      "id": "a90df7cb-8c0c-4467-938a-0209930ee1d4",
+      "name": "WhatsApp Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "jsCode": "const body = $node[\"WhatsApp Webhook\"].json.body;\nconst message = body.entry[0].changes[0].value.messages[0];\nreturn [{\n  json: {\n    message_id: message.id,\n    from: message.from,\n    type: message.type,\n    text: message.text ? message.text.body : null,\n    audio_id: message.audio ? message.audio.id : null,\n    image_id: message.image ? message.image.id : null\n  }\n}];"
+      },
+      "id": "1aa3e282-3532-421b-a5d6-0c9f131a31bf",
+      "name": "Route Payload Type",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        280,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            {
+              "value1": "={{ $json.type }}",
+              "value2": "audio"
+            }
+          ]
+        }
+      },
+      "id": "18f9cb39-b9a2-4a0b-9cb1-de8aee1c1fb3",
+      "name": "Is Audio Message?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "=python /app/scripts/validate_and_convert_audio.py /tmp/input.ogg /tmp/output.mp3"
+      },
+      "id": "e7284b39-bd9a-47ca-80b1-efcb72a81aa3",
+      "name": "Convert Audio ffmpeg",
+      "type": "n8n-nodes-base.executeCommandLine",
+      "typeVersion": 1,
+      "position": [
+        640,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/audio/transcriptions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "bodyType": "form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "file",
+              "value": "=/tmp/output.mp3"
+            },
+            {
+              "name": "model",
+              "value": "whisper-1"
+            }
+          ]
+        }
+      },
+      "id": "a19dcbff-ef38-4e8c-b9b2-ed3847eef090",
+      "name": "Call Whisper API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        820,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "gpt-4o-mini",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un estimateur de chantiers de rénovation BTP. Analyse la transcription vocale du client pour extraire la demande de travaux (dimensions, matériaux, support)."
+            },
+            {
+              "role": "user",
+              "content": "Transcription : {{ $json.text }}"
+            }
+          ]
+        }
+      },
+      "id": "df2a9bb2-bf23-4111-ab2c-88de8cf9eeef",
+      "name": "Analyze Speech Intent",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        1000,
+        200
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.openai.com/v1/chat/completions",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "openAiApi",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "gpt-4o"
+            },
+            {
+              "name": "messages",
+              "value": "=[{ \"role\": \"system\", \"content\": \"Tu es un estimateur BTP visuel. Analyse l'image du chantier soumise par le client pour estimer les travaux nécessaires (fissures, type de peinture, dépose, surface approximative).\" }, { \"role\": \"user\", \"content\": [ { \"type\": \"text\", \"text\": \"Analyse cette photo de chantier.\" }, { \"type\": \"image_url\", \"image_url\": { \"url\": \"https://graph.facebook.com/v17.0/{{ $node[\"Route Payload Type\"].json.image_id }}/media\" } } ] }]"
+            }
+          ]
+        }
+      },
+      "id": "ee7bcfeb-bc83-4a11-8930-bc7eef923aa1",
+      "name": "GPT-4o Vision Analysis",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        640,
+        400
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "openai-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": "NOTION_BTI_DB_ID",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Nom Client",
+              "type": "title",
+              "title": "Prospect BTP ({{ $node[\"Route Payload Type\"].json.from }})"
+            },
+            {
+              "key": "Numéro WhatsApp",
+              "type": "phone",
+              "phone": "={{ $node[\"Route Payload Type\"].json.from }}"
+            },
+            {
+              "key": "Analyse Visuelle IA",
+              "type": "rich_text",
+              "richText": "={{ $node[\"GPT-4o Vision Analysis\"].json.choices ? $node[\"GPT-4o Vision Analysis\"].json.choices[0].message.content : 'Analyse vocale effectuée.' }}"
+            },
+            {
+              "key": "Logs de Communication",
+              "type": "rich_text",
+              "richText": "={{ $node[\"Call Whisper API\"].json.text || 'Photo reçue' }}"
+            }
+          ]
+        }
+      },
+      "id": "ee991a92-23c2-4eb9-bf2f-ccb00b0ee3f1",
+      "name": "Create BTP Lead Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        1220,
+        300
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "devis-btp",
+        "text": "📞 *Nouvelle Demande Devis WhatsApp !*\n👤 *Contact :* {{ $node[\"Route Payload Type\"].json.from }}\n📝 *Transcription Vocale :* {{ $node[\"Call Whisper API\"].json.text || 'N/A (Photo envoyée)' }}\n👁️ *Analyse Image :* {{ $node[\"GPT-4o Vision Analysis\"].json.choices ? $node[\"GPT-4o Vision Analysis\"].json.choices[0].message.content.substring(0, 300) + '...' : 'N/A (Message vocal)' }}\n👉 _Rendez-vous dans BatiSuivi OS pour valider le chiffrage final._"
+      },
+      "id": "f82cbe99-23c2-4eb9-bf2f-ccb00b0ee3f1",
+      "name": "Slack Alert BTP",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [
+        1400,
+        300
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials-id"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "WhatsApp Webhook": {
+      "main": [
+        [
+          {
+            "node": "Route Payload Type",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Route Payload Type": {
+      "main": [
+        [
+          {
+            "node": "Is Audio Message?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Is Audio Message?": {
+      "main": [
+        [
+          {
+            "node": "Convert Audio ffmpeg",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "GPT-4o Vision Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Convert Audio ffmpeg": {
+      "main": [
+        [
+          {
+            "node": "Call Whisper API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Whisper API": {
+      "main": [
+        [
+          {
+            "node": "Analyze Speech Intent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Analyze Speech Intent": {
+      "main": [
+        [
+          {
+            "node": "Create BTP Lead Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "GPT-4o Vision Analysis": {
+      "main": [
+        [
+          {
+            "node": "Create BTP Lead Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create BTP Lead Notion": {
+      "main": [
+        [
+          {
+            "node": "Slack Alert BTP",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "meta": {
+    "instanceId": "btp-estimator-sandbox-id"
+  }
+}

@@ -1,0 +1,271 @@
+{
+  "name": "n8n_Pipeline_Proposal_V1",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "new-discovery-call",
+        "options": {}
+      },
+      "id": "f838c4b2-a42b-4e12-b91c-8cf2189dee01",
+      "name": "Form Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [
+        100,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.perplexity.ai/chat/completions",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "model",
+              "value": "sonar-reasoning-pro"
+            },
+            {
+              "name": "messages",
+              "value": "=[{ \"role\": \"system\", \"content\": \"Tu es un analyste de marché. Recherche des informations récentes sur l'entreprise cliente : son positionnement, ses concurrents directs et ses dernières actualités.\" }, { \"role\": \"user\", \"content\": \"Entreprise : {{ $node[\"Form Webhook\"].json.company_name }} (Site web : {{ $node[\"Form Webhook\"].json.website }})\" }]"
+            }
+          ]
+        }
+      },
+      "id": "e7284b39-bd9a-47ca-80b1-efcb72a81aa3",
+      "name": "Call Perplexity API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        280,
+        300
+      ],
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "perplexity-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "claude-3-5-sonnet-latest",
+        "prompt": {
+          "messages": [
+            {
+              "role": "system",
+              "content": "Tu es un directeur commercial d'agence. Compile les notes du call de découverte et l'analyse de marché pour construire une proposition de services.\nStructure requise :\n1. Diagnostic (Symptômes du prospect)\n2. Solution technique proposée\n3. Étapes de livraison & Livrables"
+            },
+            {
+              "role": "user",
+              "content": "Notes de découverte : {{ $node[\"Form Webhook\"].json.call_notes }}\n\nRecherche Perplexity : {{ $node[\"Call Perplexity API\"].json.choices[0].message.content }}"
+            }
+          ]
+        }
+      },
+      "id": "a19dcbff-ef38-4e8c-b9b2-ed3847eef090",
+      "name": "Claude Proposition Engine",
+      "type": "n8n-nodes-base.openAi",
+      "typeVersion": 1,
+      "position": [
+        460,
+        300
+      ],
+      "credentials": {
+        "openAiApi": {
+          "id": "anthropic-claude-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const costPerDay = 600;\nconst days = parseInt($node[\"Form Webhook\"].json.estimated_days || 5);\nconst totalHT = costPerDay * days;\nconst tva = totalHT * 0.2;\nconst totalTTC = totalHT + tva;\n\nreturn [{\n  json: {\n    tjm: costPerDay,\n    jours: days,\n    ht: totalHT,\n    tva: tva,\n    ttc: totalTTC\n  }\n}];"
+      },
+      "id": "18f9cb39-b9a2-4a0b-9cb1-de8aee1c1fb3",
+      "name": "Calculate Budget",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 1,
+      "position": [
+        640,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "http://gotenberg:3000/forms/chromium/convert/html",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "multipart/form-data"
+            }
+          ]
+        },
+        "sendBody": true,
+        "bodyType": "form-data",
+        "bodyParameters": {
+          "parameters": [
+            {
+              "name": "index.html",
+              "value": "<html><body><h1>Proposition Commerciale : {{ $node[\"Form Webhook\"].json.company_name }}</h1><h2>Diagnostic</h2><p>{{ $node[\"Claude Proposition Engine\"].json.choices[0].message.content }}</p><h2>Budget</h2><p>Jours estimables : {{ $node[\"Calculate Budget\"].json.jours }} à {{ $node[\"Calculate Budget\"].json.tjm }}€/jour</p><p>Total HT : {{ $node[\"Calculate Budget\"].json.ht }}€</p></body></html>"
+            }
+          ]
+        },
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "file"
+            }
+          }
+        }
+      },
+      "id": "ee7bcfeb-bc83-4a11-8930-bc7eef923aa1",
+      "name": "Gotenberg PDF Generator",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4,
+      "position": [
+        820,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "resource": "databasePage",
+        "databaseId": "NOTION_SALES_DB_ID",
+        "propertiesUi": {
+          "propertyValues": [
+            {
+              "key": "Nom Client",
+              "type": "title",
+              "title": "={{ $node[\"Form Webhook\"].json.company_name }}"
+            },
+            {
+              "key": "Diagnostic",
+              "type": "rich_text",
+              "richText": "={{ $node[\"Claude Proposition Engine\"].json.choices[0].message.content.substring(0, 1000) }}"
+            },
+            {
+              "key": "Montant HT",
+              "type": "number",
+              "number": "={{ $node[\"Calculate Budget\"].json.ht }}"
+            },
+            {
+              "key": "Statut",
+              "type": "select",
+              "select": "Brouillon Proposition"
+            }
+          ]
+        }
+      },
+      "id": "df2a9bb2-bf23-4111-ab2c-88de8cf9eeef",
+      "name": "Save Prospect in Notion",
+      "type": "n8n-nodes-base.notion",
+      "typeVersion": 2,
+      "position": [
+        1000,
+        300
+      ],
+      "credentials": {
+        "notionApi": {
+          "id": "notion-credentials-id"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "channel": "deals-proposals",
+        "text": "📄 *Proposition Commerciale Prête pour Validation !*\n🏢 *Entreprise :* {{ $node[\"Form Webhook\"].json.company_name }}\n💰 *Montant :* {{ $node[\"Calculate Budget\"].json.ht }} € HT\n📅 *Durée :* {{ $node[\"Calculate Budget\"].json.jours }} jours\n👉 _Veuillez relire et valider sur Notion pour envoi final_."
+      },
+      "id": "ee991a92-23c2-4eb9-bf2f-ccb00b0ee3f1",
+      "name": "Notify Sales Slack",
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2,
+      "position": [
+        1180,
+        300
+      ],
+      "credentials": {
+        "slackApi": {
+          "id": "slack-credentials-id"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Form Webhook": {
+      "main": [
+        [
+          {
+            "node": "Call Perplexity API",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Call Perplexity API": {
+      "main": [
+        [
+          {
+            "node": "Claude Proposition Engine",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude Proposition Engine": {
+      "main": [
+        [
+          {
+            "node": "Calculate Budget",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Calculate Budget": {
+      "main": [
+        [
+          {
+            "node": "Gotenberg PDF Generator",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gotenberg PDF Generator": {
+      "main": [
+        [
+          {
+            "node": "Save Prospect in Notion",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Prospect in Notion": {
+      "main": [
+        [
+          {
+            "node": "Notify Sales Slack",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {},
+  "meta": {
+    "instanceId": "proposal-generator-sandbox-id"
+  }
+}
