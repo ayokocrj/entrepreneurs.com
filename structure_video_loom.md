@@ -1,55 +1,57 @@
-# Structure de la Vidéo Loom Mise à Jour (Version Premium & NotebookLM)
+# Structure de la Vidéo Loom - Démo Premium avec Clips Vidéos
 
-Ce document fournit la trame narrative et visuelle précise pour enregistrer ton Loom d'accompagnement. La structure est alignée sur le document méthodologique [methodologie_mapping.md](file:///c:/Users/caryl/OneDrive/Desktop/ENTREPRENEURS.COM/methodologie_mapping.md) pour prouver ton excellence opérationnelle auprès d'Anisse et de l'équipe d'Entrepreneurs.com.
+Ce document fournit la trame narrative et visuelle précise pour enregistrer ton Loom d'accompagnement en utilisant tes **3 vidéos de démonstration préenregistrées** comme supports visuels (B-roll / voix off). 
+
+Cette approche élimine tout risque de bug en direct (l'effet démo) et te permet de montrer des automatisations complexes en un temps record.
 
 ---
 
 ## ⏱️ Fiche Technique
-* **Durée cible :** 4 à 5 minutes maximum.
-* **Onglets à préparer à l'avance :**
-  1. Ta diapositive de titre (ex. *Roland-Caryl Obam x Entrepreneurs.com*).
-  2. Ton Miro/Figma avec les schémas des frameworks sectoriels (Infopreneurs, Agences, SAV D2C).
-  3. L'interface d'un **NotebookLM** de démonstration (pour montrer l'Environnement d'Apprentissage).
-  4. Ton GitHub ou IDE avec le code propre et versionné de **Chasr**.
-  5. L'interface ou le dashboard de ton système multi-agents **Playfair Capital**.
-* **Posture :** Coach/Architecte (tu guides et structures, tu ne te fais pas exploiter comme développeur à tout faire), orienté KPIs business.
+* **Durée cible :** 5 à 6 minutes maximum.
+* **Préparation des onglets & fenêtres avant de lancer l'enregistrement :**
+  1. **Fenêtre Principale / Diapositive de Titre** : Une slide simple d'introduction (ex: *Roland-Caryl Obam x Entrepreneurs.com*).
+  2. **Navigateur Web (Chrome/Edge)** :
+     * Onglet 1 : Le dépôt GitHub [entrepreneurs.com](https://github.com/ayokocrj/entrepreneurs.com.git).
+     * Onglet 2 : L'interface **NotebookLM** montrant les fichiers pilotes importés.
+  3. **Lecteur Vidéo (ex: VLC ou Windows Media Player)** :
+     * Ouvre tes 3 vidéos de démo dans des fenêtres séparées ou réduites dans ta barre des tâches, prêtes à être maximisées.
+     * **IMPORTANT** : Coupe le son de ces vidéos dans ton lecteur pour que ta voix sur Loom reste la seule piste audio.
 
 ---
 
 ## 📑 Déroulé Narration & Visuel
 
-### 1. L'Introduction : Vision & Posture de Coach (0:00 - 0:45)
-* **Visuel :** Ta caméra en plein écran ou bulle Loom sur ta diapositive de présentation.
+### 1. L'Introduction : Positionnement de Coach IA (0:00 - 0:45)
+* **Visuel :** Ta caméra en plein écran (ou bulle Loom sur ta diapositive d'intro).
 * **Script suggéré :**
-  > "Hello Anisse, ravi de te reconnecter. Pour faire écho au rôle de Coach IA chez Entrepreneurs.com, j'ai voulu te montrer concrètement comment j'accompagne un dirigeant. 
-  > Mon rôle de coach n'est pas d'être un développeur externe à tout faire. C'est d'agir en **architecte stratégique** : apprendre aux dirigeants à diagnostiquer leurs goulots d'étranglement, à structurer leurs processus de manière déterministe via le framework WAT (Workflows, Agents, Tools), et à piloter l'implémentation pour protéger leur P&L et libérer leur temps."
+  > "Bonjour Anisse, ravi de te connecter. Pour faire écho au rôle de Coach IA chez Entrepreneurs.com, j'ai voulu te montrer concrètement ma méthode de travail.
+  > Mon rôle de coach n'est pas d'être un exécutant technique passif. C'est d'agir en **architecte opérationnel** : apprendre aux dirigeants à auditer leurs goulots d'étranglement avec mon framework WAT (Workflows, Agents, Tools), structurer leurs données, et piloter l'implémentation pour protéger leur P&L."
 
-### 2. Le Framework Sectoriel & L'Innovation NotebookLM (0:45 - 2:30)
-* **Visuel :** Partage d'écran sur ton Miro. Zoome sur les sous-systèmes (Infopreneurs High-Ticket, Agences B2B). Puis, bascule sur ton onglet **NotebookLM**.
+### 2. Le Hub de Candidature & NotebookLM (0:45 - 2:00)
+* **Visuel :** Partage ton écran sur le dépôt GitHub [entrepreneurs.com](https://github.com/ayokocrj/entrepreneurs.com.git) pour montrer la rigueur de ton organisation, puis bascule sur **NotebookLM**.
 * **Script suggéré :**
-  > "Les clients d'Entrepreneurs.com ont des business modèles très différents. 
-  > - **Pour vos Infopreneurs High-Ticket** : On automatise le triage de leads LinkedIn et l'onboarding client instantané.
-  > - **Pour vos Agences B2B** : On automatise la conversion des briefs audio Zoom en tâches ClickUp structurées pour protéger la marge brute des projets.
-  > 
-  > [Bascule sur NotebookLM]  
-  > Mais la vraie clé de ma méthode de coaching, c'est la pérennisation. Pour chaque client ou thématique, je crée un **Environnement d'Apprentissage Personnalisé** via NotebookLM. 
-  > J'y injecte les SOPs de l'entreprise, les documentations techniques des automatisations livrées, et des bibliothèques de prompts spécifiques. Le dirigeant et ses équipes peuvent ainsi interroger leur propre business en langage naturel, onboarder un nouveau collaborateur en 5 minutes, ou écouter un podcast généré automatiquement récapitulant leurs processus."
+  > "J'ai préparé un sandbox GitHub complet spécialement pour cet entretien, modélisant 4 cas d'usage typiques de vos clients (Setter Virtuel, Estimations BTP, Litiges, Générateur de Devis).
+  > [Bascule sur NotebookLM]
+  > Pour assurer la pérennisation chez le client, je crée des Espaces d'Apprentissage NotebookLM. On y injecte les SOPs et les schémas techniques. Le dirigeant ou ses équipes peuvent ainsi interroger leur business en langage naturel ou écouter un podcast explicatif automatisé. C'est cette autonomie que j'apporte aux coachés."
 
-### 3. Preuve de Rigueur : Le Cas Chasr (2:30 - 3:30)
-* **Visuel :** Bascule sur ton dépôt GitHub ou ton IDE (VS Code) pour Chasr.
+### 3. Démo 1 : Le Pipeline UGC - Cas Chasr (2:00 - 3:15)
+* **Visuel :** Maximise ta première vidéo (`Demo - V1 - Chasr.mp4`). Lance la lecture en coupant le son de la vidéo. Montre l'intégration de Trendtrack, Gemini et Notion.
 * **Script suggéré :**
-  > "Pour illustrer cette rigueur, voici un exemple concret issu de ma collaboration actuelle avec **Chasr**. 
-  > Beaucoup de dirigeants prennent des décisions sur des données erronées. Pour Chasr, j'ai développé une infrastructure de validation et de synchronisation de base de données propre, versionnée sur GitHub. 
-  > L'impact business ? Zéro erreur de saisie, des KPIs 100% justes en temps réel pour le pilotage financier, et une base de données propre prête à accueillir l'IA. C'est cette rigueur technique que je transmets aux clients."
+  > "Voici un exemple concret d'implémentation opérationnelle chez **Chasr**. J'ai développé un pipeline d'automatisation UGC complet. Le système écoute l'API Trendtrack, enrichit et structure les données de tendances avec Gemini, puis injecte le tout proprement dans un Notion CRM. 
+  > L'intérêt pour le client ? Zéro saisie manuelle, une base de données qualifiée 24/7, et des insights immédiatement exploitables pour orienter la création de contenu."
 
-### 4. Preuve d'Exigence : Le Cas Playfair Capital (3:30 - 4:15)
-* **Visuel :** Affiche le code ou l'interface de ton système multi-agents autonome pour Playfair.
+### 4. Démo 2 : Création de Contenu Scalée (3:15 - 4:15)
+* **Visuel :** Bascule sur ta deuxième vidéo (création automatique de vidéos et synchronisation Google Sheets). Lance la lecture (muette) au moment clé de la génération.
 * **Script suggéré :**
-  > "Et pour vos clients les plus matures, qui ont besoin d'analyses documentaires lourdes comme le fonds d'investissement **Playfair Capital**, j'architecture des systèmes multi-agents autonomes. 
-  > Ce système intègre une logique de **Self-Healing (auto-correction)** : si une structure de site cible change ou qu'une API échoue, le système s'adapte automatiquement sans planter silencieusement. L'impact ? Une continuité opérationnelle 24/7 et la sécurisation des flux de données critiques."
+  > "Pour les clients qui veulent scaler leur présence organique sans exploser leurs coûts de production, j'ai mis en place ce système : une IA génère automatiquement les déclinaisons vidéo à partir d'un script, puis indexe et suit chaque statut de rendu directement dans un Google Sheets de pilotage. On élimine ainsi 90% du travail d'édition répétitif pour les équipes créatives."
 
-### 5. Conclusion & Prochaine Étape (4:15 - 4:45)
-* **Visuel :** Retour sur ton visage en grand écran.
+### 5. Démo 3 : Système Multi-Agents - Cas Playfair Capital (4:15 - 5:15)
+* **Visuel :** Bascule sur ta troisième vidéo (fond d'investissement Playfair). Lance la lecture (muette) montrant les agents autonomes ou l'extraction de données complexes.
 * **Script suggéré :**
-  > "En résumé, j'apporte aux clients d'Entrepreneurs.com la rigueur d'ingénieur d'Oxford combinée à une posture de coach capable de traduire la technique en ROI financier immédiat. 
-  > Je serai ravi qu'on s'appelle 15 minutes la semaine prochaine pour échanger sur vos besoins actuels et voir comment intégrer cette approche chez vous. À très bientôt Anisse !"
+  > "Enfin, pour les besoins les plus complexes — comme ici pour le fonds de capital-risque **Playfair Capital** — j'architecture des systèmes multi-agents autonomes capables de scanner le web, d'extraire des données non structurées et de s'auto-corriger (Self-Healing) si une structure de site change. C'est de l'ingénierie robuste qui garantit la continuité opérationnelle."
+
+### 6. Conclusion & Prochaine Étape (5:15 - 5:45)
+* **Visuel :** Caméra sur ton visage en plein écran.
+* **Script suggéré :**
+  > "En résumé, j'apporte aux entrepreneurs de votre programme une double compétence : la rigueur d'un ingénieur technique capable de coder des systèmes robustes, et la pédagogie d'un coach orienté ROI business. 
+  > Je serais ravi de planifier un court échange pour voir comment nous pouvons intégrer cette dynamique chez Entrepreneurs.com. Merci Anisse, et à très vite !"
